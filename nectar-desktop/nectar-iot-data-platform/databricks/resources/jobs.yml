@@ -1,0 +1,192 @@
+# =============================================================================
+# Workflows jobs — the orchestration layer
+#
+# Three jobs, deliberately separate:
+#   * batch and maintenance are split so compaction can never fail the pipeline
+#     that produces the data, and never competes with the ingest window
+#   * streaming is its own job because a stream never finishes, so it can never
+#     be a predecessor in a dependency graph
+#
+# Retries are only safe because every task is idempotent: Auto Loader keeps a
+# checkpoint, silver and gold MERGE on the business key. Without that property,
+# automatic retries duplicate data rather than recover from failure.
+# =============================================================================
+
+resources:
+  jobs:
+
+    # ------------------------------------------------------------ hourly batch
+    nectar_batch:
+      name: nectar-iot-batch
+      description: pipeline -> quality gate -> hierarchy -> serving
+      max_concurrent_runs: 1        # the layers MERGE into shared tables
+      timeout_seconds: 5400
+      queue:
+        enabled: true               # an overrunning hour queues, never drops
+
+      schedule:
+        quartz_cron_expression: "0 0 * * * ?"
+        timezone_id: Asia/Kolkata
+        pause_status: PAUSED
+
+      # Late means the dashboards are stale; failed means they are wrong.
+      # Different severities, so a warning rather than a failure.
+      health:
+        rules:
+          - metric: RUN_DURATION_SECONDS
+            op: GREATER_THAN
+            value: 2700             # 45 min
+
+      parameters:
+        - { name: catalog, default: "${var.catalog}" }
+
+      tasks:
+
+        # Seeds the landing Volume in a fresh workspace. In production this task
+        # is removed — the gateway writes the files.
+        - task_key: seed_landing
+          max_retries: 1
+          notebook_task:
+            notebook_path: ../notebooks/00_seed_landing.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              days: "7"
+              interval_minutes: "15"
+
+        - task_key: run_medallion
+          depends_on: [{ task_key: seed_landing }]
+          timeout_seconds: 3600
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.nectar_etl_pipeline.id}
+            full_refresh: false
+
+        # No retries. A data quality breach is not transient, so retrying it
+        # only burns time and hides the problem.
+        - task_key: quality_gate
+          depends_on: [{ task_key: run_medallion }]
+          max_retries: 0
+          timeout_seconds: 900
+          notebook_task:
+            notebook_path: ../notebooks/05_quality_report.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+
+        # Separate from the pipeline: iterative closure expansion is not
+        # expressible declaratively, and it is cheap enough to retry alone.
+        - task_key: build_hierarchy
+          depends_on: [{ task_key: quality_gate }]
+          max_retries: 2
+          min_retry_interval_millis: 120000
+          retry_on_timeout: true
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../notebooks/04_hierarchy.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+
+        - task_key: publish_serving
+          depends_on: [{ task_key: build_hierarchy }]
+          max_retries: 2
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../notebooks/07_maintenance.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              step: serving
+
+    # -------------------------------------------------------- nightly cleanup
+    # Restate first, then compact, so OPTIMIZE runs once over final files.
+    nectar_maintenance:
+      name: nectar-iot-maintenance
+      description: restate late partitions -> optimize + vacuum -> prune quarantine
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+
+      schedule:
+        quartz_cron_expression: "0 30 2 * * ?"
+        timezone_id: Asia/Kolkata
+        pause_status: PAUSED
+
+      parameters:
+        - { name: catalog, default: "${var.catalog}" }
+
+      tasks:
+        # Ingesting a late record is the easy half. The half usually forgotten
+        # is that the aggregate for that record's EVENT date is now wrong.
+        - task_key: restate_late_partitions
+          max_retries: 2
+          timeout_seconds: 3600
+          notebook_task:
+            notebook_path: ../notebooks/07_maintenance.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              step: restate
+
+        - task_key: optimize_and_vacuum
+          depends_on: [{ task_key: restate_late_partitions }]
+          max_retries: 1
+          timeout_seconds: 3600
+          notebook_task:
+            notebook_path: ../notebooks/07_maintenance.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              step: optimize
+
+        # Quarantine is the fastest growing table in the lakehouse when a device
+        # goes bad. After 30 days those rows are archaeology.
+        - task_key: prune_quarantine
+          depends_on: [{ task_key: optimize_and_vacuum }]
+          max_retries: 1
+          timeout_seconds: 1800
+          notebook_task:
+            notebook_path: ../notebooks/07_maintenance.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"
+              step: prune
+
+    # ------------------------------------------------------------- streaming
+    # Continuous mode restarts a task that dies, which is the right failure
+    # response for a stream. The three tasks have no dependencies between them.
+    nectar_streaming:
+      name: nectar-iot-streaming
+      description: producer | Auto Loader bronze | silver rules — Structured Streaming
+      max_concurrent_runs: 1
+
+      continuous:
+        pause_status: PAUSED
+
+      health:
+        rules:
+          - metric: STREAMING_BACKLOG_FILES
+            op: GREATER_THAN
+            value: 200
+
+      tasks:
+        - task_key: producer
+          notebook_task:
+            notebook_path: ../notebooks/autoloader/01_producer.py
+            base_parameters:
+              minutes: "600"
+              seconds_between_files: "8"
+
+        - task_key: bronze_stream
+          notebook_task:
+            notebook_path: ../notebooks/autoloader/02_bronze_stream.py
+
+        - task_key: silver_stream
+          notebook_task:
+            notebook_path: ../notebooks/autoloader/03_silver_stream.py
+
+    # ------------------------------------------------------------ one-time
+    nectar_setup:
+      name: nectar-iot-setup
+      description: create catalog, schemas and the landing Volume
+      max_concurrent_runs: 1
+      parameters:
+        - { name: catalog, default: "${var.catalog}" }
+      tasks:
+        - task_key: create_catalog_and_volume
+          notebook_task:
+            notebook_path: ../notebooks/00_setup_catalog.py
+            base_parameters:
+              catalog: "{{job.parameters.catalog}}"

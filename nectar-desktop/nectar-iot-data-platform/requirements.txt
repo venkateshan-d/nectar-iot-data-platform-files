@@ -1,0 +1,25 @@
+# Core lakehouse stack
+pyspark==3.5.3
+delta-spark==3.2.1
+
+# Config / utils
+PyYAML>=6.0
+python-dateutil>=2.8
+
+# Data handling + serving
+pandas>=2.0
+pyarrow>=14.0
+numpy>=1.24
+duckdb>=0.10          # local SQL engine for the Task 6 queries
+
+# Asset hierarchy (Task 4 bonus)
+networkx>=3.1
+
+# Streaming (Bonus Option A)
+kafka-python>=2.0.2
+
+# Reporting
+Jinja2>=3.1
+
+# Tests
+pytest>=7.4

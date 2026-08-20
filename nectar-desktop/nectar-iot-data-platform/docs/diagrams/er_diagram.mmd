@@ -1,0 +1,141 @@
+erDiagram
+    DIM_DATE     ||--o{ FACT_TELEMETRY     : "date_key"
+    DIM_TIME     ||--o{ FACT_TELEMETRY     : "time_key"
+    DIM_ASSET    ||--o{ FACT_TELEMETRY     : "asset_id"
+    DIM_SITE     ||--o{ FACT_TELEMETRY     : "site_key"
+    DIM_BUILDING ||--o{ FACT_TELEMETRY     : "building_key"
+
+    DIM_DATE     ||--o{ FACT_ENERGY_HOURLY : "date_key"
+    DIM_ASSET    ||--o{ FACT_ENERGY_HOURLY : "asset_id"
+    DIM_BUILDING ||--o{ FACT_ENERGY_HOURLY : "building_key"
+
+    DIM_DATE     ||--o{ FACT_EVENT         : "date_key"
+    DIM_ASSET    ||--o{ FACT_EVENT         : "asset_id"
+
+    DIM_SITE     ||--o{ DIM_BUILDING       : "contains"
+    DIM_BUILDING ||--o{ DIM_ASSET          : "houses"
+    DIM_ASSET    ||--o{ ASSET_CLOSURE      : "ancestor_id"
+    DIM_ASSET    ||--o{ ASSET_CLOSURE      : "descendant_id"
+    DIM_ASSET    ||--|| DIM_ASSET_HIERARCHY : "denormalised view"
+
+    DIM_DATE {
+        int  date_key PK "yyyyMMdd"
+        date full_date
+        int  year
+        int  quarter
+        int  month
+        int  week_of_year
+        int  day_of_week
+        bool is_weekend
+        int  fiscal_year
+        int  fiscal_quarter
+    }
+
+    DIM_TIME {
+        int  time_key PK "minute of day 0..1439"
+        int  hour_of_day
+        int  minute_of_hour
+        str  hh_mm
+        str  day_part
+        bool is_business_hours
+    }
+
+    DIM_SITE {
+        bigint site_key PK
+        str    site_id UK
+        str    site_name
+        str    city
+        str    country
+        str    timezone
+        str    customer_id
+    }
+
+    DIM_BUILDING {
+        bigint building_key PK
+        str    building_id UK
+        str    building_name
+        bigint site_key FK
+        float  floor_area_sqm
+        str    building_type
+        str    size_band
+    }
+
+    DIM_ASSET {
+        bigint    asset_key PK "surrogate"
+        str       asset_id "natural key"
+        str       asset_name
+        str       asset_type
+        str       manufacturer
+        str       model
+        date      installation_date
+        float     rated_power_kw
+        str       site_id FK
+        str       building_id FK
+        str       parent_asset_id FK
+        bool      is_orphan
+        str       scd_hash
+        timestamp valid_from
+        timestamp valid_to
+        bool      is_current
+    }
+
+    ASSET_CLOSURE {
+        str ancestor_id PK_FK
+        str descendant_id PK_FK
+        int depth "0 = self"
+        str path
+    }
+
+    DIM_ASSET_HIERARCHY {
+        str asset_id PK
+        str root_asset_id
+        int level
+        str hierarchy_path
+        int child_count
+        int descendant_count
+        bool is_leaf
+        bool is_orphan
+        bool is_disconnected
+        str connectivity_status
+    }
+
+    FACT_TELEMETRY {
+        str       asset_id FK
+        str       sensor_id
+        timestamp timestamp
+        int       date_key FK
+        int       time_key FK
+        float     temperature
+        float     humidity
+        float     pressure
+        float     vibration
+        float     power_consumption
+        str       operating_mode
+        bool      is_late_arrival
+        date      event_date "partition"
+    }
+
+    FACT_ENERGY_HOURLY {
+        str       asset_id FK
+        timestamp event_hour
+        int       date_key FK
+        float     energy_kwh
+        float     avg_power_kw
+        float     peak_power_kw
+        float     covered_hours
+        int       reading_count
+        date      event_date "partition"
+    }
+
+    FACT_EVENT {
+        str       event_id PK
+        str       asset_id FK
+        timestamp timestamp
+        int       date_key FK
+        str       event_type
+        str       severity
+        str       message
+        bool      is_fault
+        int       severity_rank
+        date      event_date "partition"
+    }

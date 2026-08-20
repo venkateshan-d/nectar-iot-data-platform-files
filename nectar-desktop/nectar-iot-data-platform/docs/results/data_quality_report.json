@@ -1,0 +1,1108 @@
+{
+  "batch_id": "ca5021064d25",
+  "generated_at": "2026-08-17T11:58:00+00:00",
+  "table_format": "parquet",
+  "totals": {
+    "rows_evaluated": 611885,
+    "rules_evaluated": 35,
+    "rules_breached": 0,
+    "blocking_breaches": 0,
+    "rows_quarantined": 11946,
+    "pass_rate_pct": 100.0
+  },
+  "quarantine": {
+    "telemetry": 11877,
+    "events": 69
+  },
+  "rules": [
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.uniqueness.business_key",
+      "dimension": "uniqueness",
+      "column_name": "asset_id,sensor_id,timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 7968,
+      "failure_rate": 0.0131,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "(asset_id, sensor_id, timestamp) must be unique - redundant gateway retries would otherwise double-count energy"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.timeliness.late_arrival",
+      "dimension": "timeliness",
+      "column_name": "timestamp",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 7484,
+      "failure_rate": 0.012304,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "record landed more than 24.0h after the event occurred; downstream aggregates for that window must be recomputed"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.timeliness.late_arrival",
+      "dimension": "timeliness",
+      "column_name": "timestamp",
+      "severity": "WARN",
+      "rows_evaluated": 3624,
+      "rows_failed": 42,
+      "failure_rate": 0.011589,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "event landed after the late-arrival watermark"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.message_present",
+      "dimension": "completeness",
+      "column_name": "message",
+      "severity": "WARN",
+      "rows_evaluated": 3624,
+      "rows_failed": 37,
+      "failure_rate": 0.01021,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "event carries no human-readable message"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.uniqueness.event_id",
+      "dimension": "uniqueness",
+      "column_name": "event_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 35,
+      "failure_rate": 0.009658,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "event_id must be unique - duplicate faults would inflate MTBF"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.severity_not_null",
+      "dimension": "completeness",
+      "column_name": "severity",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 19,
+      "failure_rate": 0.005243,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "severity is mandatory on an operational event"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.operating_mode_present",
+      "dimension": "completeness",
+      "column_name": "operating_mode",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 2051,
+      "failure_rate": 0.003372,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "operating_mode missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.power_consumption_present",
+      "dimension": "completeness",
+      "column_name": "power_consumption",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 2025,
+      "failure_rate": 0.003329,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "power_consumption missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.vibration_present",
+      "dimension": "completeness",
+      "column_name": "vibration",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 2007,
+      "failure_rate": 0.0033,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "vibration missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.humidity_present",
+      "dimension": "completeness",
+      "column_name": "humidity",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 1998,
+      "failure_rate": 0.003285,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "humidity missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.temperature_present",
+      "dimension": "completeness",
+      "column_name": "temperature",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 1987,
+      "failure_rate": 0.003267,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "temperature missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.pressure_present",
+      "dimension": "completeness",
+      "column_name": "pressure",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 1947,
+      "failure_rate": 0.003201,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "pressure missing on a reading"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.consistency.asset_registered",
+      "dimension": "consistency",
+      "column_name": "asset_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 1700,
+      "failure_rate": 0.002795,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "asset_id is not present in the asset register"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.timestamp_not_null",
+      "dimension": "completeness",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 1583,
+      "failure_rate": 0.002603,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "timestamp is mandatory - a reading we cannot attribute is unusable"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.consistency.asset_registered",
+      "dimension": "consistency",
+      "column_name": "asset_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 8,
+      "failure_rate": 0.002208,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "event references an asset that is not in the register"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.timestamp_not_null",
+      "dimension": "completeness",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 8,
+      "failure_rate": 0.002208,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "timestamp is mandatory on an operational event"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.validity.timestamp_parseable",
+      "dimension": "validity",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 7,
+      "failure_rate": 0.001932,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "event timestamp could not be parsed"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.validity.timestamp_parseable",
+      "dimension": "validity",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 1099,
+      "failure_rate": 0.001807,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "timestamp string could not be cast to a timestamp"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.validity.timestamp_plausible",
+      "dimension": "validity",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 723,
+      "failure_rate": 0.001189,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "timestamp parses but is before 2000 or more than a day in the future"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.accuracy.temperature_in_range",
+      "dimension": "accuracy",
+      "column_name": "temperature",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 641,
+      "failure_rate": 0.001054,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "temperature outside the physically possible range [-40.0, 120.0]"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.accuracy.power_consumption_in_range",
+      "dimension": "accuracy",
+      "column_name": "power_consumption",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 613,
+      "failure_rate": 0.001008,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "power_consumption outside the physically possible range [0.0, 5000.0]"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.accuracy.humidity_in_range",
+      "dimension": "accuracy",
+      "column_name": "humidity",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 595,
+      "failure_rate": 0.000978,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "humidity outside the physically possible range [0.0, 100.0]"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.accuracy.pressure_in_range",
+      "dimension": "accuracy",
+      "column_name": "pressure",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 584,
+      "failure_rate": 0.00096,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "pressure outside the physically possible range [0.0, 1200.0]"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.validity.timestamp_plausible",
+      "dimension": "validity",
+      "column_name": "timestamp",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 3,
+      "failure_rate": 0.000828,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "event timestamp is implausible"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.asset_id_not_null",
+      "dimension": "completeness",
+      "column_name": "asset_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 484,
+      "failure_rate": 0.000796,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "asset_id is mandatory - a reading we cannot attribute is unusable"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.site_id_not_null",
+      "dimension": "completeness",
+      "column_name": "site_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 484,
+      "failure_rate": 0.000796,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "site_id is mandatory - a reading we cannot attribute is unusable"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.completeness.building_id_not_null",
+      "dimension": "completeness",
+      "column_name": "building_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 484,
+      "failure_rate": 0.000796,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "building_id is mandatory - a reading we cannot attribute is unusable"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.event_id_not_null",
+      "dimension": "completeness",
+      "column_name": "event_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 1,
+      "failure_rate": 0.000276,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "event_id is mandatory on an operational event"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.asset_id_not_null",
+      "dimension": "completeness",
+      "column_name": "asset_id",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 1,
+      "failure_rate": 0.000276,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "asset_id is mandatory on an operational event"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.completeness.event_type_not_null",
+      "dimension": "completeness",
+      "column_name": "event_type",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 1,
+      "failure_rate": 0.000276,
+      "threshold": 0.05,
+      "passed": true,
+      "details": {
+        "description": "event_type is mandatory on an operational event"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.validity.operating_mode_enum",
+      "dimension": "validity",
+      "column_name": "operating_mode",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 0,
+      "failure_rate": 0.0,
+      "threshold": 0.01,
+      "passed": true,
+      "details": {
+        "description": "operating_mode outside ['RUNNING', 'IDLE', 'STANDBY', 'BOOST', 'MAINTENANCE', 'OFF', 'FAULT']"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.accuracy.vibration_in_range",
+      "dimension": "accuracy",
+      "column_name": "vibration",
+      "severity": "BLOCKING",
+      "rows_evaluated": 608261,
+      "rows_failed": 0,
+      "failure_rate": 0.0,
+      "threshold": 0.02,
+      "passed": true,
+      "details": {
+        "description": "vibration outside the physically possible range [0.0, 100.0]"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:56:54.129891",
+      "rule_id": "tel.consistency.site_matches_register",
+      "dimension": "consistency",
+      "column_name": "site_id",
+      "severity": "WARN",
+      "rows_evaluated": 608261,
+      "rows_failed": 0,
+      "failure_rate": 0.0,
+      "threshold": 0.005,
+      "passed": true,
+      "details": {
+        "description": "site_id on the reading disagrees with the asset register"
+      },
+      "layer": "silver",
+      "table_name": "telemetry"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.validity.event_type_enum",
+      "dimension": "validity",
+      "column_name": "event_type",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 0,
+      "failure_rate": 0.0,
+      "threshold": 0.01,
+      "passed": true,
+      "details": {
+        "description": "event_type outside ['Alarm', 'Warning', 'Fault', 'Info']"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    },
+    {
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:06.898201",
+      "rule_id": "evt.validity.severity_enum",
+      "dimension": "validity",
+      "column_name": "severity",
+      "severity": "BLOCKING",
+      "rows_evaluated": 3624,
+      "rows_failed": 0,
+      "failure_rate": 0.0,
+      "threshold": 0.01,
+      "passed": true,
+      "details": {
+        "description": "severity outside ['Low', 'Medium', 'High']"
+      },
+      "layer": "silver",
+      "table_name": "events"
+    }
+  ],
+  "by_dimension": [
+    {
+      "dimension": "accuracy",
+      "rules": 5,
+      "breached": 0,
+      "rows_failed": 2433
+    },
+    {
+      "dimension": "completeness",
+      "rules": 16,
+      "breached": 0,
+      "rows_failed": 15117
+    },
+    {
+      "dimension": "consistency",
+      "rules": 3,
+      "breached": 0,
+      "rows_failed": 1708
+    },
+    {
+      "dimension": "timeliness",
+      "rules": 2,
+      "breached": 0,
+      "rows_failed": 7526
+    },
+    {
+      "dimension": "uniqueness",
+      "rules": 2,
+      "breached": 0,
+      "rows_failed": 8003
+    },
+    {
+      "dimension": "validity",
+      "rules": 7,
+      "breached": 0,
+      "rows_failed": 1832
+    }
+  ],
+  "by_table": [
+    {
+      "layer": "silver",
+      "table_name": "events",
+      "rows_evaluated": 3624,
+      "rules": 13,
+      "breached": 0
+    },
+    {
+      "layer": "silver",
+      "table_name": "telemetry",
+      "rows_evaluated": 608261,
+      "rules": 22,
+      "breached": 0
+    }
+  ],
+  "freshness": [
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-02",
+      "asset_id": "SITE-SIN-BLD-02-FLOWS-006",
+      "last_seen_at": "2026-08-14 20:35:00",
+      "readings": 5368,
+      "lag_minutes": 3802.95,
+      "is_stale": true,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-01",
+      "asset_id": "SITE-SIN-BLD-01-UPS-004",
+      "last_seen_at": "2026-08-15 13:45:00",
+      "readings": 5559,
+      "lag_minutes": 2772.95,
+      "is_stale": true,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-02",
+      "asset_id": "SITE-CBE-BLD-02-PRESS-009",
+      "last_seen_at": "2026-08-15 22:55:00",
+      "readings": 5665,
+      "lag_minutes": 2222.95,
+      "is_stale": true,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-03",
+      "asset_id": "SITE-CBE-BLD-03-COMPR-006",
+      "last_seen_at": "2026-08-16 07:40:00",
+      "readings": 5769,
+      "lag_minutes": 1697.95,
+      "is_stale": true,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-02",
+      "asset_id": "SITE-BLR-BLD-02-COMPR-005",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 12205,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-02",
+      "asset_id": "SITE-BLR-BLD-02-UPS-004",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 12206,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-FLOWS-006",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6094,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-FLOWS-007",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6105,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-PUMP-005",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6099,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-01",
+      "asset_id": "SITE-CBE-BLD-01-AHU-009",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6098,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-01",
+      "asset_id": "SITE-CBE-BLD-01-PUMP-003",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 12231,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-01",
+      "asset_id": "SITE-CBE-BLD-01-TEMPS-014",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6095,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-02",
+      "asset_id": "SITE-CBE-BLD-02-BOILE-001",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6109,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-03",
+      "asset_id": "SITE-CBE-BLD-03-UPS-005",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6106,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-01",
+      "asset_id": "SITE-SIN-BLD-01-PRESS-002",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6103,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-02",
+      "asset_id": "SITE-SIN-BLD-02-FLOWS-002",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6097,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-03",
+      "asset_id": "SITE-SIN-BLD-03-PUMP-004",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6110,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-02",
+      "asset_id": "SITE-BLR-BLD-02-PRESS-006",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6102,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-BOILE-001",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6104,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-PRESS-004",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6120,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-BLR",
+      "building_id": "SITE-BLR-BLD-03",
+      "asset_id": "SITE-BLR-BLD-03-UPS-002",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6111,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-01",
+      "asset_id": "SITE-CBE-BLD-01-TEMPS-011",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6110,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-CBE",
+      "building_id": "SITE-CBE-BLD-02",
+      "asset_id": "SITE-CBE-BLD-02-FLOWS-007",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 6111,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-02",
+      "asset_id": "SITE-SIN-BLD-02-BOILE-004",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 12234,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    },
+    {
+      "site_id": "SITE-SIN",
+      "building_id": "SITE-SIN-BLD-02",
+      "asset_id": "SITE-SIN-BLD-02-CHILL-008",
+      "last_seen_at": "2026-08-17 11:50:00",
+      "readings": 12227,
+      "lag_minutes": 7.95,
+      "is_stale": false,
+      "batch_id": "ca5021064d25",
+      "evaluated_at": "2026-08-17 11:57:57.622957"
+    }
+  ],
+  "completeness": [
+    {
+      "asset_id": "SITE-CBE-BLD-03-COMPR-006",
+      "completeness_pct": 95.39,
+      "missing_readings": 279
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-03-COMPR-002",
+      "completeness_pct": 96.13,
+      "missing_readings": 491
+    },
+    {
+      "asset_id": "SITE-CBE-BLD-02-FLOWS-006",
+      "completeness_pct": 96.13,
+      "missing_readings": 245
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-CHILL-008",
+      "completeness_pct": 96.14,
+      "missing_readings": 489
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-02-UPS-003",
+      "completeness_pct": 96.16,
+      "missing_readings": 243
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-03-FLOWS-006",
+      "completeness_pct": 96.18,
+      "missing_readings": 242
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-FLOWS-002",
+      "completeness_pct": 96.2,
+      "missing_readings": 241
+    },
+    {
+      "asset_id": "SITE-CBE-BLD-01-TEMPS-014",
+      "completeness_pct": 96.2,
+      "missing_readings": 241
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-CHILL-010",
+      "completeness_pct": 96.21,
+      "missing_readings": 240
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-02-FLOWS-003",
+      "completeness_pct": 96.21,
+      "missing_readings": 240
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-02-FLOWS-002",
+      "completeness_pct": 96.23,
+      "missing_readings": 239
+    },
+    {
+      "asset_id": "SITE-CBE-BLD-01-AHU-009",
+      "completeness_pct": 96.24,
+      "missing_readings": 238
+    },
+    {
+      "asset_id": "SITE-CBE-BLD-02-FLOWS-004",
+      "completeness_pct": 96.24,
+      "missing_readings": 238
+    },
+    {
+      "asset_id": "SITE-CBE-BLD-01-CHILL-008",
+      "completeness_pct": 96.25,
+      "missing_readings": 475
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-03-PUMP-005",
+      "completeness_pct": 96.26,
+      "missing_readings": 237
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-AHU-011",
+      "completeness_pct": 96.28,
+      "missing_readings": 471
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-AHU-004",
+      "completeness_pct": 96.28,
+      "missing_readings": 472
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-01-BOILE-003",
+      "completeness_pct": 96.29,
+      "missing_readings": 235
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-03-COMPR-007",
+      "completeness_pct": 96.29,
+      "missing_readings": 235
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-01-TEMPS-006",
+      "completeness_pct": 96.31,
+      "missing_readings": 234
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-03-PRESS-003",
+      "completeness_pct": 96.31,
+      "missing_readings": 234
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-02-PRESS-006",
+      "completeness_pct": 96.31,
+      "missing_readings": 234
+    },
+    {
+      "asset_id": "SITE-SIN-BLD-03-FLOWS-005",
+      "completeness_pct": 96.31,
+      "missing_readings": 234
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-02-COMPR-005",
+      "completeness_pct": 96.31,
+      "missing_readings": 467
+    },
+    {
+      "asset_id": "SITE-BLR-BLD-02-UPS-004",
+      "completeness_pct": 96.32,
+      "missing_readings": 466
+    }
+  ],
+  "verdict": "PASS"
+}

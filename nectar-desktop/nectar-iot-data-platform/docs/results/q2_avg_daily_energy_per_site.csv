@@ -1,0 +1,4 @@
+site_id,site_name,city,country,active_days,calendar_days,total_energy_kwh,avg_daily_kwh_per_active_day,avg_daily_kwh_per_calendar_day,avg_weekend_kwh,avg_weekday_kwh,min_daily_kwh,max_daily_kwh,daily_cv
+SITE-BLR,Whitefield Tech Park,Bengaluru,IN,22,22,424322.24,19287.37,19287.37,4764.78,24733.35,4703.54,27733.06,0.508
+SITE-SIN,Changi Business Hub,Singapore,SG,22,22,323829.45,14719.52,14719.52,3715.51,18846.03,3288.39,25957.87,0.516
+SITE-CBE,Nectar Coimbatore Campus,Coimbatore,IN,22,22,273525.49,12432.98,12432.98,3161.98,15909.6,2785.67,21695.06,0.515

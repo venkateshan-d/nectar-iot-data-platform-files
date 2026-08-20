@@ -1,0 +1,142 @@
+# =============================================================================
+# Local infrastructure for the Nectar IoT data platform.
+#
+#   docker compose up -d kafka kafka-ui        # streaming demo (Bonus Option A)
+#   docker compose --profile airflow up -d     # + Airflow scheduler & webserver
+#   docker compose --profile warehouse up -d   # + PostgreSQL serving layer
+#
+# The batch pipeline needs none of this - it runs with `make all` on the host.
+# This file exists so the streaming and orchestration deliverables can actually
+# be demonstrated rather than only described.
+# =============================================================================
+
+name: nectar-iot
+
+services:
+  # ---------------------------------------------------------------------------
+  # Kafka in KRaft mode - no ZooKeeper, single broker, fine for a demo.
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: nectar-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_CFG_NODE_ID: "1"
+      KAFKA_CFG_PROCESS_ROLES: "broker,controller"
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      # Topics are created explicitly by kafka-init so partition count and
+      # retention are deliberate rather than defaulted.
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_CFG_NUM_PARTITIONS: "6"
+      KAFKA_CFG_LOG_RETENTION_HOURS: "72"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    volumes:
+      - kafka-data:/bitnami/kafka
+
+  kafka-init:
+    image: bitnami/kafka:3.7
+    container_name: nectar-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        # 6 partitions: keyed by asset_id, so this bounds per-asset ordering
+        # groups and lets the consumer scale to 6 cores.
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic iot.telemetry.raw --partitions 6 --replication-factor 1 \
+          --config retention.ms=259200000 --config compression.type=producer
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic iot.events.raw --partitions 3 --replication-factor 1 \
+          --config retention.ms=604800000
+        # DLQ keeps data longer than the source topic - you need the bad
+        # messages to still be there when someone finally investigates.
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+          --topic iot.telemetry.dlq --partitions 1 --replication-factor 1 \
+          --config retention.ms=1209600000
+        kafka-topics.sh --bootstrap-server kafka:9092 --list
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: nectar-kafka-ui
+    ports:
+      - "8085:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: nectar-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - Airflow metadata DB and (optionally) the warehouse serving layer
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: nectar-postgres
+    profiles: ["airflow", "warehouse"]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nectar
+      POSTGRES_PASSWORD: nectar
+      POSTGRES_DB: nectar
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nectar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./sql/ddl/02_warehouse_postgres.sql:/docker-entrypoint-initdb.d/10-warehouse.sql:ro
+
+  # ---------------------------------------------------------------------------
+  # Airflow (LocalExecutor - one container, enough for a demo)
+  # ---------------------------------------------------------------------------
+  airflow:
+    image: apache/airflow:2.9.3-python3.11
+    container_name: nectar-airflow
+    profiles: ["airflow"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://nectar:nectar@postgres/nectar
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__SCHEDULER__CATCHUP_BY_DEFAULT: "false"
+      NECTAR_HOME: /opt/nectar
+      NECTAR_JSON_LOGS: "1"
+      PYTHONPATH: /opt/nectar/src
+      _PIP_ADDITIONAL_REQUIREMENTS: "pyspark==3.5.3 delta-spark==3.2.1 duckdb PyYAML networkx"
+    volumes:
+      - ./alternatives/airflow/dags:/opt/airflow/dags:ro
+      - ./:/opt/nectar
+      - airflow-logs:/opt/airflow/logs
+    command: >
+      bash -c "airflow db migrate &&
+               airflow users create --username admin --password admin
+                 --firstname Nectar --lastname Admin --role Admin --email admin@nectarit.com || true &&
+               airflow pools set spark_pool 2 'bounds concurrent Spark drivers' &&
+               airflow standalone"
+
+volumes:
+  kafka-data:
+  pg-data:
+  airflow-logs:

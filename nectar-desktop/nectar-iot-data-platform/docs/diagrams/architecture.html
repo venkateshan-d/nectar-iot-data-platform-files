@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nectar IoT Data Platform — Architecture</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --surface-1:#fcfcfb; --plane:#f9f9f7;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --edge:#2a78d6;      /* slot 1  — ingestion   */
+  --lake:#eb6834;      /* slot 2  — storage     */
+  --compute:#1baf7a;   /* slot 3  — processing  */
+  --serve:#4a3aa7;     /* slot 7  — serving     */
+  --ops:#52514e;
+  --good:#0ca30c; --warning:#fab219; --critical:#d03b3b;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --surface-1:#1a1a19; --plane:#0d0d0d;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --edge:#3987e5; --lake:#d95926; --compute:#199e70; --serve:#9085e9; --ops:#c3c2b7;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; padding:28px 18px 64px; background:var(--plane); color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+.wrap{max-width:1180px;margin:0 auto}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink-2);margin:0 0 26px;font-size:13px}
+
+.flow{display:flex;flex-direction:column;gap:8px}
+.band{
+  background:var(--surface-1); border:1px solid var(--border); border-radius:12px;
+  padding:14px 16px 16px;
+}
+.band-head{
+  display:flex;align-items:center;gap:9px;margin-bottom:12px;
+  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);
+}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.node{
+  flex:1 1 190px;min-width:180px;
+  border:1px solid var(--border);border-left:3px solid var(--axis);
+  border-radius:8px;padding:10px 12px;background:var(--plane);
+}
+.node .t{font-weight:650;font-size:13px;margin-bottom:3px}
+.node .d{color:var(--ink-2);font-size:12px;line-height:1.45}
+.node code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+.node.edge{border-left-color:var(--edge)}
+.node.lake{border-left-color:var(--lake)}
+.node.compute{border-left-color:var(--compute)}
+.node.serve{border-left-color:var(--serve)}
+.node.ops{border-left-color:var(--ops)}
+.node.alert{border-left-color:var(--critical)}
+
+.arrow{
+  text-align:center;color:var(--muted);font-size:12px;letter-spacing:.04em;
+  padding:1px 0;
+}
+.arrow b{color:var(--ink-2);font-weight:600}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:760px){ .split{grid-template-columns:1fr} }
+
+.legend{
+  margin-top:22px;display:flex;flex-wrap:wrap;gap:16px;
+  font-size:12px;color:var(--ink-2);
+}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.note{
+  margin-top:20px;padding:12px 14px;border:1px solid var(--border);
+  border-left:3px solid var(--warning);border-radius:8px;background:var(--surface-1);
+  font-size:12.5px;color:var(--ink-2);
+}
+.note b{color:var(--ink)}
+.foot{margin-top:26px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Nectar IoT Data Platform — Architecture</h1>
+<p class="sub">Kafka → Delta Lake medallion → star schema, with a streaming path for latency and a batch path for truth.</p>
+
+<div class="flow">
+
+  <!-- EDGE + INGEST -->
+  <section class="band">
+    <div class="band-head"><span class="dot" style="background:var(--edge)"></span>1 · Edge &amp; ingestion</div>
+    <div class="row">
+      <div class="node edge">
+        <div class="t">IoT devices</div>
+        <div class="d">Chillers, AHUs, pumps, boilers, UPS, sensors.<br>5-minute nominal sampling, irregular in practice.</div>
+      </div>
+      <div class="node edge">
+        <div class="t">Edge gateway</div>
+        <div class="d">Buffers through network outages, batches and retries.<br><b>At-least-once</b> — duplicates and late arrivals are normal.</div>
+      </div>
+      <div class="node edge">
+        <div class="t">Kafka</div>
+        <div class="d"><code>iot.telemetry.raw</code> · 6 partitions<br><code>iot.events.raw</code> · 3 partitions<br>Keyed by <code>asset_id</code>; 72 h retention = replay window.</div>
+      </div>
+      <div class="node edge">
+        <div class="t">Asset registry</div>
+        <div class="d">Sites, buildings, assets and <code>parent_asset_id</code>.<br>Authoritative for topology and referential integrity.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow">▼ &nbsp; <b>two read paths, one source of record</b></div>
+
+  <!-- COMPUTE -->
+  <section class="band">
+    <div class="band-head"><span class="dot" style="background:var(--compute)"></span>2 · Processing</div>
+    <div class="split">
+      <div class="node compute">
+        <div class="t">Spark Structured Streaming — seconds</div>
+        <div class="d">
+          Event-time windows · watermark 15 min · checkpointed exactly-once.<br>
+          Dedupe within the watermark; 5-minute rollup for the live dashboard.<br>
+          <b>Fast and approximate.</b>
+        </div>
+      </div>
+      <div class="node compute">
+        <div class="t">Spark batch (Airflow, hourly) — authoritative</div>
+        <div class="d">
+          bronze → silver → gold → hierarchy → serving.<br>
+          Idempotent <code>MERGE</code> on the business key; restates whatever the stream approximated.<br>
+          <b>Slow and correct.</b>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="node alert">
+        <div class="t">Dead letter queue</div>
+        <div class="d">Payloads that are not valid JSON cannot be validated by a rule — there is no record to evaluate. Raw bytes + reason are kept so the stream never blocks on one bad producer.</div>
+      </div>
+      <div class="node compute">
+        <div class="t">Shared rule set</div>
+        <div class="d">The same <code>Rule</code> objects run in both paths (<code>nectar/quality/rules.py</code>), so streaming and batch cannot drift apart.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow">▼</div>
+
+  <!-- LAKEHOUSE -->
+  <section class="band">
+    <div class="band-head"><span class="dot" style="background:var(--lake)"></span>3 · Lakehouse — Delta Lake on object storage</div>
+    <div class="row">
+      <div class="node lake">
+        <div class="t">Bronze — as received</div>
+        <div class="d">Every column a string, plus lineage (<code>_ingest_id</code>, <code>_source_file</code>, <code>_payload_hash</code>).<br>Partition <code>ingest_date</code>. Append-only, replayable.</div>
+      </div>
+      <div class="node lake">
+        <div class="t">Silver — trustworthy</div>
+        <div class="d">Cast · enrich · validate · dedupe · MERGE.<br>Partition <code>event_date</code>, Z-ORDER <code>asset_id</code>.</div>
+      </div>
+      <div class="node lake">
+        <div class="t">Gold — consumable</div>
+        <div class="d">Star schema, curated marts, site/building/asset roll-ups, closure table.<br>Partition <code>event_date</code>.</div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="node alert">
+        <div class="t">Quarantine — not dropped</div>
+        <div class="d">Rows failing a BLOCKING rule, tagged with the rule ids they broke and the batch that rejected them. Replayable after the upstream fix.</div>
+      </div>
+      <div class="node lake">
+        <div class="t">dq_results — quality as data</div>
+        <div class="d">One row per (batch, table, rule) with counts, thresholds and verdict. "Which site's data degraded this week" is a SQL query.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow">▼</div>
+
+  <!-- SERVING -->
+  <section class="band">
+    <div class="band-head"><span class="dot" style="background:var(--serve)"></span>4 · Serving</div>
+    <div class="row">
+      <div class="node serve">
+        <div class="t">SQL warehouse</div>
+        <div class="d">Databricks SQL / Snowflake external tables over the same Delta files — no copy, no drift. DuckDB locally.</div>
+      </div>
+      <div class="node serve">
+        <div class="t">Dashboards</div>
+        <div class="d">Site &amp; asset metrics, energy trends, fault statistics, live 5-minute rollup.</div>
+      </div>
+      <div class="node serve">
+        <div class="t">REST API</div>
+        <div class="d"><code>/sites/{id}/energy</code> · <code>/assets/{id}/health</code> · <code>/sites/{id}/assets</code></div>
+      </div>
+      <div class="node serve">
+        <div class="t">ML / feature store</div>
+        <div class="d">Atomic grain retained; SCD2 + time travel give point-in-time-correct, reproducible training sets.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPS -->
+  <section class="band">
+    <div class="band-head"><span class="dot" style="background:var(--ops)"></span>5 · Orchestration &amp; observability — spans every layer</div>
+    <div class="row">
+      <div class="node ops">
+        <div class="t">Airflow</div>
+        <div class="d">Hourly DAG with catchup, <code>max_active_runs=1</code>, exponential retries, per-task timeouts, SLAs. Nightly maintenance DAG for OPTIMIZE / VACUUM / late-arrival restatement.</div>
+      </div>
+      <div class="node ops">
+        <div class="t">Quality gate</div>
+        <div class="d">A BLOCKING breach fails the gate and downstream tasks skip — stale beats wrong. The report still runs, because a failed batch is when it matters most.</div>
+      </div>
+      <div class="node ops">
+        <div class="t">Signals</div>
+        <div class="d">Per-asset freshness watermark · rule pass rates · consumer lag &amp; state size · JSON logs carrying <code>batch_id</code> end to end.</div>
+      </div>
+      <div class="node ops">
+        <div class="t">Alerting</div>
+        <div class="d">SLA miss ⇒ warn (dashboards stale). Failure ⇒ page (dashboards wrong), with the quarantine query for that batch in the message.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--edge)"></span> Edge &amp; ingestion</span>
+  <span><span class="dot" style="background:var(--compute)"></span> Processing</span>
+  <span><span class="dot" style="background:var(--lake)"></span> Storage</span>
+  <span><span class="dot" style="background:var(--serve)"></span> Serving</span>
+  <span><span class="dot" style="background:var(--ops)"></span> Orchestration</span>
+  <span><span class="dot" style="background:var(--critical)"></span> Failure handling</span>
+</div>
+
+<div class="note">
+  <b>The central trade-off.</b> The streaming path answers “what is happening right now”
+  and the batch path owns “what actually happened”. Reconciliation between them is not a
+  nightly surprise — it is the design. Both run the same validation rules from the same
+  module, so the two answers differ only in latency and completeness, never in definition.
+</div>
+
+<p class="foot">Nectar Data Engineer Challenge · full rationale in <code>docs/01_architecture.md</code></p>
+</div></body></html>

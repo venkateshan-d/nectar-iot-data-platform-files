@@ -1,0 +1,60 @@
+# =============================================================================
+# Databricks Asset Bundle — Nectar IoT Data Platform
+#
+# Everything that runs on Databricks is declared here, in YAML, in version
+# control: one pipeline and three jobs. There is no second way to create them,
+# on purpose — a resource you can create two ways drifts.
+#
+#   databricks auth login --host https://<your-workspace-host>
+#   databricks bundle validate
+#   databricks bundle deploy -t dev
+#   databricks bundle run nectar_batch
+#
+# Serverless throughout, so this deploys unchanged on Free Edition and on a paid
+# workspace, on any of the three clouds. No node types, no autoscaling config,
+# nothing cloud-specific to edit.
+# =============================================================================
+
+bundle:
+  name: nectar-iot-platform
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds the medallion schemas
+    default: nectar
+  landing_volume:
+    description: UC Volume used as the raw landing zone
+    default: /Volumes/nectar/bronze/landing
+  notifications_email:
+    description: Address for job failure and SLA alerts
+    default: ""
+
+include:
+  - resources/*.yml
+
+targets:
+
+  # Development: schedules paused, pipeline in development mode, resources
+  # prefixed with the deploying user so two engineers do not collide.
+  dev:
+    mode: development
+    default: true
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+
+  # Production: schedules live, pipeline out of development mode.
+  prod:
+    mode: production
+    workspace:
+      root_path: /Shared/.bundle/${bundle.name}/${bundle.target}
+    resources:
+      pipelines:
+        nectar_etl_pipeline:
+          development: false
+      jobs:
+        nectar_batch:
+          schedule:
+            pause_status: UNPAUSED
+        nectar_maintenance:
+          schedule:
+            pause_status: UNPAUSED

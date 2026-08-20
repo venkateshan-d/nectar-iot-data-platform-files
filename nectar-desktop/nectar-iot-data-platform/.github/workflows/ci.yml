@@ -1,0 +1,140 @@
+# =============================================================================
+# CI - runs on every push and every pull request.
+#
+# Two jobs on purpose:
+#   * `tests` needs no credentials, so a fork or an outside reviewer gets a
+#     green tick without being given access to anything.
+#   * `bundle-validate` needs a workspace, so it is skipped rather than failed
+#     when the secrets are absent. A red X that only means "no secrets here"
+#     trains people to ignore red Xs.
+# =============================================================================
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests and static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # PySpark needs a JVM. Pinned, because Spark 3.5 is not supported on 21.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Byte-compile everything
+        run: python -m compileall -q src tests alternatives/airflow databricks
+
+      - name: Unit tests
+        env:
+          PYTHONPATH: src
+        run: pytest tests -q --junitxml=test-results.xml
+
+      # The bundle YAML is data. Data that ships broken is worse than code that
+      # ships broken, because nothing tries to parse it until deploy day. This
+      # runs with no credentials, unlike `databricks bundle validate`.
+      - name: Validate the bundle YAML
+        run: |
+          pip install PyYAML
+          python - <<'PY'
+          import yaml, glob, os
+
+          for f in ["databricks/databricks.yml"] + sorted(glob.glob("databricks/resources/*.yml")):
+              yaml.safe_load(open(f))
+              print(f"{f:<40} parses")
+
+          jobs = yaml.safe_load(open("databricks/resources/jobs.yml"))["resources"]["jobs"]
+          for name, job in jobs.items():
+              keys = [t["task_key"] for t in job["tasks"]]
+              assert len(keys) == len(set(keys)), f"{name}: duplicate task_key"
+              for t in job["tasks"]:
+                  for d in t.get("depends_on", []):
+                      assert d["task_key"] in keys, f"{name}: {t['task_key']} depends on unknown {d['task_key']}"
+                  nb = t.get("notebook_task", {}).get("notebook_path")
+                  if nb:
+                      path = os.path.normpath(os.path.join("databricks/resources", nb))
+                      assert os.path.exists(path), f"{name}/{t['task_key']}: missing notebook {path}"
+              print(f"{name:<40} ok  ({len(keys)} tasks)")
+
+          pipe = yaml.safe_load(open("databricks/resources/pipelines.yml"))["resources"]["pipelines"]
+          for name, p in pipe.items():
+              for lib in p["libraries"]:
+                  path = os.path.normpath(os.path.join("databricks/resources", lib["notebook"]["path"]))
+                  assert os.path.exists(path), f"{name}: missing notebook {path}"
+              print(f"{name:<40} ok  ({len(p['libraries'])} notebooks)")
+          PY
+
+      - name: Check the docs have no dead links
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          bad = []
+          for md in pathlib.Path(".").rglob("*.md"):
+              if ".git" in md.parts:
+                  continue
+              for m in re.finditer(r"\]\(([^)#][^)]*)\)", md.read_text()):
+                  target = m.group(1).split("#")[0]
+                  if not target or target.startswith(("http", "mailto")):
+                      continue
+                  if not (md.parent / target).resolve().exists():
+                      bad.append(f"{md}: {target}")
+          print("\n".join(bad) or "all links resolve")
+          sys.exit(1 if bad else 0)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results.xml
+
+  bundle-validate:
+    name: Validate the Databricks bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Are workspace credentials configured?
+        id: creds
+        env:
+          HOST: ${{ secrets.DATABRICKS_HOST }}
+        run: echo "present=$([ -n "$HOST" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - uses: databricks/setup-cli@main
+        if: steps.creds.outputs.present == 'yes'
+
+      - name: databricks bundle validate
+        if: steps.creds.outputs.present == 'yes'
+        working-directory: databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle validate -t dev
+
+      - name: Skipped
+        if: steps.creds.outputs.present != 'yes'
+        run: echo "No DATABRICKS_HOST secret set - skipping. See docs/06_devops.md."

@@ -1,0 +1,20 @@
+@page { size: A4; margin: 13mm 14mm; }
+body { font-family: "DejaVu Sans", Helvetica, Arial, sans-serif; font-size: 9.4pt;
+       line-height: 1.32; color: #16191d; }
+h1 { font-size: 16pt; margin: 0 0 2mm 0; color: #0b3d5c; border-bottom: 1.2pt solid #0b3d5c; padding-bottom: 1mm; }
+h2 { font-size: 11.2pt; margin: 3.4mm 0 1.4mm; color: #0b3d5c; }
+h3 { font-size: 9.9pt; margin: 2.6mm 0 1mm; color: #24506b; }
+p  { margin: 0 0 1.6mm; text-align: justify; }
+ul, ol { margin: 0 0 1.6mm; padding-left: 4.6mm; }
+li { margin: 0 0 0.5mm; }
+table { border-collapse: collapse; width: 100%; margin: 1.4mm 0 2.2mm; font-size: 8.3pt; }
+th { background: #eef3f7; text-align: left; }
+th, td { border: 0.4pt solid #b9c6d1; padding: 0.9mm 1.4mm; vertical-align: top; }
+code { font-family: "DejaVu Sans Mono", monospace; font-size: 8pt; background: #f2f4f6; padding: 0 0.6mm; }
+pre { background: #f6f8fa; border-left: 1.6pt solid #9fb4c4; padding: 1.4mm 2mm;
+      font-size: 7.5pt; line-height: 1.2; margin: 1.4mm 0 2mm; overflow: hidden; }
+pre code { background: none; font-size: 7.5pt; }
+blockquote { margin: 1.4mm 0; padding-left: 2.6mm; border-left: 1.6pt solid #b9c6d1; color: #3a4a57; }
+hr { border: 0; border-top: 0.4pt solid #cfd8e0; margin: 2.4mm 0; }
+h2, h3 { page-break-after: avoid; }
+table, pre { page-break-inside: avoid; }

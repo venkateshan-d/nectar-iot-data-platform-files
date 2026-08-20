@@ -1,0 +1,5 @@
+# Installed only on the scheduler image - kept separate so the Spark job image
+# stays small and does not inherit Airflow's dependency tree.
+apache-airflow==2.9.3
+apache-airflow-providers-apache-spark>=4.8.0
+apache-airflow-providers-slack>=8.6.0

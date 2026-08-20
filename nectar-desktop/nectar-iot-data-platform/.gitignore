@@ -1,0 +1,39 @@
+# Generated data - regenerate with `make generate`
+data/raw/
+data/lakehouse/
+data/serving/
+data/checkpoints/
+data/query_results/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Spark / Delta
+spark-warehouse/
+metastore_db/
+derby.log
+.ivy2/
+
+# Airflow
+airflow/logs/
+airflow.db
+airflow.cfg
+webserver_config.py
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Databricks / streaming demo scratch
+databricks/**/_tmp_*

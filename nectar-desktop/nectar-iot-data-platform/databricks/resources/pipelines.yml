@@ -1,0 +1,36 @@
+# =============================================================================
+# Lakeflow Declarative Pipeline — the medallion
+#
+# serverless: true keeps this deployable on Free Edition and on a paid
+# workspace without editing a compute block.
+#
+# continuous: false (triggered) is deliberate. An always-on pipeline bills
+# continuously; sub-hour freshness is served by the separate streaming job,
+# and the batch layer only needs to be hourly.
+# =============================================================================
+
+resources:
+  pipelines:
+    nectar_etl_pipeline:
+      name: nectar-etl-pipeline
+      catalog: ${var.catalog}
+      schema: silver
+      serverless: true
+      continuous: false
+      photon: true
+      development: true
+      channel: CURRENT
+
+      configuration:
+        nectar.catalog: ${var.catalog}
+        nectar.landing_volume: ${var.landing_volume}
+        nectar.telemetry_interval_minutes: "15"
+        nectar.late_arrival_watermark_hours: "24"
+        # Predictive Optimization handles compaction and vacuum from observed
+        # query patterns, which retires most of the nightly maintenance job.
+        pipelines.autoOptimize.managed: "true"
+
+      libraries:
+        - notebook: { path: ../notebooks/01_bronze.py }
+        - notebook: { path: ../notebooks/02_silver.py }
+        - notebook: { path: ../notebooks/03_gold.py }

@@ -1,0 +1,93 @@
+# =============================================================================
+# Deploy - the bundle is deployed BY CI. Nobody runs the CLI from a laptop.
+#
+#   merge to main  -> deploy to dev   (jobs paused, resources prefixed per user)
+#   tag v*         -> deploy to prod  (jobs unpaused, runs as a service principal)
+#
+# A tag is the promotion gate. It is a deliberate, reviewable, revertable act -
+# unlike "whatever is on main right now", which is whatever someone merged last.
+# =============================================================================
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Bundle target
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false      # never cancel a half-finished deploy
+
+jobs:
+  deploy:
+    name: Deploy bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # prod is a GitHub Environment - add required reviewers there and a human
+    # has to approve before the production deploy runs.
+    environment: ${{ (startsWith(github.ref, 'refs/tags/v') || inputs.target == 'prod') && 'prod' || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the target
+        id: t
+        run: |
+          if [ -n "${{ inputs.target }}" ]; then
+            echo "target=${{ inputs.target }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "target=prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "target=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Are workspace credentials configured?
+        id: creds
+        env:
+          HOST: ${{ secrets.DATABRICKS_HOST }}
+        run: echo "present=$([ -n "$HOST" ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+
+      - uses: databricks/setup-cli@main
+        if: steps.creds.outputs.present == 'yes'
+
+      - name: Validate
+        if: steps.creds.outputs.present == 'yes'
+        working-directory: databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle validate -t ${{ steps.t.outputs.target }}
+
+      - name: Deploy
+        if: steps.creds.outputs.present == 'yes'
+        working-directory: databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle deploy -t ${{ steps.t.outputs.target }}
+
+      # Smoke test, not a full run: prove the deployed job exists and its graph
+      # resolves. A deploy that produces an unrunnable job should fail here, not
+      # at 02:30 tomorrow.
+      - name: Smoke test - the setup job runs
+        if: steps.creds.outputs.present == 'yes' && steps.t.outputs.target == 'dev'
+        working-directory: databricks
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+        run: databricks bundle run nectar_setup -t dev
+
+      - name: Skipped
+        if: steps.creds.outputs.present != 'yes'
+        run: |
+          echo "No DATABRICKS_HOST secret set, so nothing was deployed."
+          echo "Add the three secrets described in docs/06_devops.md to enable this."

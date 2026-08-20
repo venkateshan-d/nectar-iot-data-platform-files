@@ -1,0 +1,34 @@
+{
+  "raw_root": "/home/claude/nectar-iot-data-platform/data/raw",
+  "sites": 3,
+  "buildings": 9,
+  "assets": 85,
+  "telemetry_rows": 607777,
+  "event_rows": 3623,
+  "window_start": "2026-07-27T00:00:00+00:00",
+  "window_end": "2026-08-17T11:55:00+00:00",
+  "degraded_assets": [
+    "SITE-BLR-BLD-01-CHILL-008",
+    "SITE-BLR-BLD-01-CHILL-010",
+    "SITE-BLR-BLD-02-COMPR-005",
+    "SITE-BLR-BLD-03-UPS-002",
+    "SITE-CBE-BLD-02-PUMP-002",
+    "SITE-SIN-BLD-01-BOILE-003"
+  ],
+  "silent_assets": {
+    "SITE-CBE-BLD-02-PRESS-009": "2026-08-15T22:57:06.992502+00:00",
+    "SITE-CBE-BLD-03-COMPR-006": "2026-08-16T07:42:25.407794+00:00",
+    "SITE-SIN-BLD-01-UPS-004": "2026-08-15T13:49:56.446846+00:00",
+    "SITE-SIN-BLD-02-FLOWS-006": "2026-08-14T20:35:23.522579+00:00"
+  },
+  "site_anomalies": {
+    "SITE-CBE": [
+      "2026-08-14T01:23:45.824107+00:00",
+      "2026-08-15T20:04:41.347252+00:00"
+    ],
+    "SITE-SIN": [
+      "2026-08-14T02:39:54.696037+00:00",
+      "2026-08-15T23:18:56.760890+00:00"
+    ]
+  }
+}

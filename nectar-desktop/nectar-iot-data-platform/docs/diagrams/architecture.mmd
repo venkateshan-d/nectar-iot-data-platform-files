@@ -1,0 +1,54 @@
+flowchart LR
+    subgraph EDGE["Edge"]
+        D1["IoT devices<br/>chillers · AHUs · pumps · sensors"]
+        GW["Edge gateway<br/>buffer · batch · retry"]
+        D1 --> GW
+    end
+
+    subgraph INGEST["Ingestion"]
+        K["Kafka<br/>iot.telemetry.raw (6p)<br/>iot.events.raw (3p)<br/>keyed by asset_id"]
+        REG[("Asset registry<br/>CDC / nightly extract")]
+        GW -->|MQTT / HTTPS| K
+    end
+
+    subgraph LAKE["Lakehouse — Delta Lake on S3/ADLS"]
+        B["**Bronze**<br/>raw + lineage<br/>partition: ingest_date"]
+        S["**Silver**<br/>typed · validated · deduped<br/>partition: event_date"]
+        G["**Gold**<br/>star schema · marts · roll-ups<br/>partition: event_date"]
+        Q["**Quarantine**<br/>rejected rows + reasons"]
+        DQ[("dq_results<br/>quality as data")]
+    end
+
+    subgraph COMPUTE["Processing"]
+        ST["Spark Structured Streaming<br/>watermark 15 min · exactly-once"]
+        BA["Spark batch (Airflow, hourly)<br/>bronze → silver → gold"]
+        DLQ["Dead letter queue<br/>unparseable payloads"]
+    end
+
+    subgraph SERVE["Serving"]
+        WH["Databricks SQL / Snowflake<br/>external tables"]
+        API["REST / GraphQL API<br/>asset health · site energy"]
+        BI["Dashboards<br/>Power BI · Streamlit"]
+        ML["Feature store → ML<br/>anomaly · predictive maintenance"]
+    end
+
+    subgraph OPS["Orchestration & observability"]
+        AF["Airflow<br/>DAGs · SLAs · retries"]
+        MON["Metrics · structured logs<br/>Slack / PagerDuty"]
+    end
+
+    K --> ST
+    K --> BA
+    REG --> BA
+    ST --> S
+    ST --> DLQ
+    ST -->|5-min rollup| G
+    BA --> B --> S --> G
+    S -.rejected.-> Q
+    S --> DQ
+    G --> WH --> BI
+    G --> API
+    G --> ML
+    AF --> BA
+    DQ --> MON
+    AF --> MON

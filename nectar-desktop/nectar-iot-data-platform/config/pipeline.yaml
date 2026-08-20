@@ -1,0 +1,103 @@
+# ---------------------------------------------------------------------------
+# Nectar IoT Data Platform - pipeline configuration
+#
+# Every runtime knob lives here so that the same code runs unchanged on a
+# laptop, in CI and on a cluster. Values can be overridden per-environment with
+# the NECTAR_ENV variable or on the command line (see src/nectar/config.py).
+# ---------------------------------------------------------------------------
+
+project:
+  name: nectar-iot-data-platform
+  owner: data-engineering
+  timezone: Asia/Kolkata          # Nectar HQ is in Coimbatore, IN
+
+storage:
+  # ---------------------------------------------------------------------
+  # table_format drives the lakehouse storage layer.
+  #   delta   -> Delta Lake (production / default). ACID, MERGE, time travel.
+  #   parquet -> plain Parquet fallback for environments with no access to
+  #              Maven Central (air-gapped CI runners, offline demo boxes).
+  # The pipeline logic is identical for both; only src/nectar/io_layer.py
+  # branches. See docs/01_architecture.md#storage-format for the trade-offs.
+  # ---------------------------------------------------------------------
+  table_format: delta
+  root: ./data/lakehouse
+  layers:
+    raw: ./data/raw
+    bronze: ./data/lakehouse/bronze
+    silver: ./data/lakehouse/silver
+    gold: ./data/lakehouse/gold
+    quarantine: ./data/lakehouse/quarantine
+    quality: ./data/lakehouse/quality
+  checkpoints: ./data/checkpoints
+
+spark:
+  app_name: nectar-iot-platform
+  master: local[*]
+  shuffle_partitions: 8           # small for local; set to 3x cores on cluster
+  driver_memory: 3g
+  log_level: WARN
+
+generator:
+  seed: 42
+  sites: 3
+  buildings_per_site: 3
+  assets_per_building: 12
+  silent_assets: 4                # assets that go dark before the window ends
+  site_anomalies: 2               # site-wide consumption excursions (Q6 signal)
+  site_anomaly_factor: 1.35
+  days: 21                        # long enough for a trailing baseline in Q6
+  telemetry_interval_minutes: 5
+  event_rate_per_asset_per_day: 1.8
+  # Fraction of records deliberately corrupted so the data quality framework
+  # has something real to catch. Set to 0 for a clean dataset.
+  defects:
+    duplicate_rate: 0.010
+    null_rate: 0.015
+    outlier_rate: 0.004
+    invalid_timestamp_rate: 0.003
+    unknown_asset_rate: 0.002
+    late_arrival_rate: 0.020
+    corrupt_payload_rate: 0.0008   # unparseable JSON -> dead letter queue
+    late_arrival_max_hours: 30
+
+quality:
+  # A batch is failed (pipeline aborts) when a BLOCKING rule breaches its
+  # threshold. WARN rules are recorded and alerted on but do not stop the run.
+  fail_on_blocking_breach: true
+  thresholds:
+    null_rate_max: 0.05           # >5% nulls on a required column is blocking
+    duplicate_rate_max: 0.05
+    unknown_asset_rate_max: 0.02
+    outlier_rate_max: 0.02
+    freshness_max_minutes: 60     # watermark lag before an asset is "stale"
+  late_arrival_watermark_hours: 24
+  ranges:
+    temperature: [-40.0, 120.0]   # deg C - physical sensor limits
+    humidity: [0.0, 100.0]        # %
+    pressure: [0.0, 1200.0]       # kPa
+    vibration: [0.0, 100.0]       # mm/s RMS
+    power_consumption: [0.0, 5000.0]  # kW instantaneous
+
+gold:
+  utilization:
+    # Operating modes that count as "productive" time for utilization.
+    productive_modes: [RUNNING, BOOST]
+  anomaly:
+    # Site power anomaly detection (SQL challenge Q6).
+    baseline_days: 7
+    zscore_threshold: 2.0
+
+streaming:
+  kafka:
+    bootstrap_servers: localhost:9092
+    telemetry_topic: iot.telemetry.raw
+    events_topic: iot.events.raw
+    dlq_topic: iot.telemetry.dlq
+    consumer_group: nectar-telemetry-consumer
+  trigger_interval: 10 seconds
+  watermark: 15 minutes
+  max_offsets_per_trigger: 50000
+
+serving:
+  duckdb_path: ./data/serving/nectar.duckdb
