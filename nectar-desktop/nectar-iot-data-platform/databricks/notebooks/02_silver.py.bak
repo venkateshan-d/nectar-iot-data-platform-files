@@ -185,7 +185,7 @@ def silver_telemetry():
         # arrive close together. Beyond the watermark the batch layer owns it.
         .withWatermark("timestamp", "15 minutes")
         .dropDuplicates(["asset_id", "sensor_id", "timestamp"])
-        .drop("_failed_rules", "_asset_known", "_register_site_id")
+        .drop("_failed_rules", "_raw_timestamp", "_asset_known", "_register_site_id")
     )
 
 
@@ -200,7 +200,7 @@ def silver_events():
         dp.read_stream("events_prepared")
         .withWatermark("timestamp", "15 minutes")
         .dropDuplicates(["event_id"])
-        .drop("_failed_rules", "_asset_known",
+        .drop("_failed_rules", "_raw_timestamp", "_asset_known",
               "_register_site_id", "_register_building_id")
     )
 

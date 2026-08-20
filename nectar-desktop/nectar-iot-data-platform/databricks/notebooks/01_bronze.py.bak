@@ -46,12 +46,13 @@ def _autoload(path: str, schema: StructType, name: str):
     return (
         spark.readStream.format("cloudFiles")
         .option("cloudFiles.format", "json")
-        .option("cloudFiles.inferColumnTypes", "true")
+        .option("cloudFiles.inferColumnTypes", "false")
         .option("cloudFiles.schemaLocation", f"{SCHEMA_LOC}/{name}")
-        .option("pathGlobFilter", "*.txt")
         # New columns appearing upstream stop the stream rather than being
         # silently ignored; the pipeline restarts with the wider schema.
+        .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
         .option("rescuedDataColumn", "_rescued_data")
+        .schema(schema)
         .load(path)
         # Lineage, identical in intent to the portable pipeline's audit columns.
         .withColumn("_source_file", F.col("_metadata.file_path"))

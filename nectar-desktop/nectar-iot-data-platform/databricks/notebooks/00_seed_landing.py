@@ -1,4 +1,8 @@
 # Databricks notebook source
+# /// script
+# [tool.databricks.environment]
+# environment_version = "5"
+# ///
 # MAGIC %md
 # MAGIC # 0 · Seed the landing zone
 # MAGIC
@@ -32,6 +36,7 @@ INTERVAL = int(dbutils.widgets.get("interval_minutes"))
 LANDING = f"/Volumes/{CATALOG}/bronze/landing"
 
 # COMMAND ----------
+
 # MAGIC %md ## Catalog, schemas, Volume
 
 # COMMAND ----------
@@ -45,6 +50,7 @@ for sub in ["telemetry", "events", "sites", "buildings", "assets", "_checkpoints
 print("landing zone ready:", LANDING)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## The estate
 # MAGIC
@@ -117,6 +123,7 @@ print("damaged on purpose:", sorted(BROKEN))
 print("will go silent:    ", sorted(SILENT))
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Reference data → CSV
 # MAGIC
@@ -137,6 +144,7 @@ write_csv(buildings_rows, "buildings")
 write_csv(assets, "assets")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Readings
 # MAGIC
@@ -172,6 +180,7 @@ def make_reading(asset, ts, surge=1.0):
     }
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Break some of them on purpose, and count every one
 
@@ -200,6 +209,7 @@ def maybe_break(row):
     return out
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Generate the history
 # MAGIC
@@ -231,6 +241,7 @@ print("injected:", broke)
 print("power surge day:", surge_day, "sites:", sorted(SURGE_SITES))
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Events
 # MAGIC
@@ -260,6 +271,7 @@ for a in assets:
 print(f"{len(events):,} events")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Write the JSON files
 # MAGIC
@@ -278,6 +290,7 @@ write_json(rows, "telemetry")
 write_json(events, "events")
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Save the proof sheet
 # MAGIC
@@ -301,6 +314,7 @@ spark.createDataFrame(truth).write.mode("overwrite").option("overwriteSchema", "
 display(spark.table(f"{CATALOG}.quality.seed_truth"))
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## What is in the Volume now
 
